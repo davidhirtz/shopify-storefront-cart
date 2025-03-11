@@ -1,5 +1,5 @@
 import { StorefrontApiClient } from "@shopify/storefront-api-client";
-import { Cart, CartLine, MoneyV2 } from "./storefront-api-types";
+import { Cart, CartLine, MoneyV2 } from "../types/storefront-api-types";
 interface ShopifyConfig {
     $cartCount?: HTMLElement;
     $cart?: HTMLElement;
@@ -51,4 +51,3 @@ export default class Shopify {
     formatPrice: (money: MoneyV2) => string;
 }
 export {};
-//# sourceMappingURL=storefront.d.ts.map

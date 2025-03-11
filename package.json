@@ -5,7 +5,12 @@
   "type": "module",
   "main": "dist/storefront.js",
   "author": "David Hirtz",
+  "homepage": "https://github.com/davidhirtz/shopify-storefront-cart",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidhirtz/shopify-storefront-cart.git"
+  },
   "scripts": {
     "build": "tsc"
   },

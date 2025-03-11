@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
     "declaration": true,
-    "declarationDir": "./types",
-    "declarationMap": true,
     "module": "ES6",
     "moduleResolution": "node",
     "outDir": "dist",
