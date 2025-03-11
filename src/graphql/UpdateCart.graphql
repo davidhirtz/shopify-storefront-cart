@@ -1,0 +1,207 @@
+fragment CartFragment on Cart {
+    id
+    createdAt
+    updatedAt
+    lines(first: 20) {
+        nodes {
+            ...CartLineFragment
+        }
+        pageInfo {
+            hasNextPage
+            hasPreviousPage
+        }
+    }
+    attributes {
+        key
+        value
+    }
+    cost {
+        totalAmount {
+            amount
+            currencyCode
+        }
+        subtotalAmount {
+            amount
+            currencyCode
+        }
+        totalTaxAmount {
+            amount
+            currencyCode
+        }
+        totalDutyAmount {
+            amount
+            currencyCode
+        }
+    }
+    checkoutUrl
+    discountCodes {
+        applicable
+        code
+    }
+    discountAllocations {
+        discountedAmount {
+            amount
+            currencyCode
+        }
+        discountApplication {
+            targetType
+            allocationMethod
+            targetSelection
+            value {
+                ... on PricingPercentageValue {
+                    percentage
+                }
+                ... on MoneyV2 {
+                    amount
+                    currencyCode
+                }
+            }
+        }
+        ... on CartCodeDiscountAllocation {
+            code
+        }
+        ... on CartAutomaticDiscountAllocation {
+            title
+        }
+        ... on CartCustomDiscountAllocation {
+            title
+        }
+    }
+    appliedGiftCards {
+        ...AppliedGiftCardFragment
+    }
+    note
+}
+fragment CartLineFragment on CartLine {
+    id
+    merchandise {
+        ... on ProductVariant {
+            id
+            title
+            image {
+                thumbnail: url(transform: {
+                    maxWidth: ${shopify.thumbnailMaxWidth},
+                    maxHeight: ${shopify.thumbnailMaxHeight},
+                })
+                url
+                altText
+                width
+                height
+            }
+            product {
+                id
+                handle
+                title
+            }
+            weight
+            availableForSale
+            sku
+            selectedOptions {
+                name
+                value
+            }
+            compareAtPrice {
+                amount
+                currencyCode
+            }
+            price {
+                amount
+                currencyCode
+            }
+            unitPrice {
+                amount
+                currencyCode
+            }
+            unitPriceMeasurement {
+                measuredType
+                quantityUnit
+                quantityValue
+                referenceUnit
+                referenceValue
+            }
+        }
+    }
+    quantity
+    attributes {
+        key
+        value
+    }
+    cost {
+        totalAmount {
+            amount
+            currencyCode
+        }
+        subtotalAmount {
+            amount
+            currencyCode
+        }
+        amountPerQuantity {
+            amount
+            currencyCode
+        }
+        compareAtAmountPerQuantity {
+            amount
+            currencyCode
+        }
+    }
+    discountAllocations {
+        discountedAmount {
+            amount
+            currencyCode
+        }
+        discountApplication {
+            targetType
+            allocationMethod
+            targetSelection
+            value {
+                ... on PricingPercentageValue {
+                    percentage
+                }
+                ... on MoneyV2 {
+                    amount
+                    currencyCode
+                }
+            }
+        }
+        ... on CartCodeDiscountAllocation {
+            code
+        }
+        ... on CartAutomaticDiscountAllocation {
+            title
+        }
+        ... on CartCustomDiscountAllocation {
+            title
+        }
+    }
+}
+fragment AppliedGiftCardFragment on AppliedGiftCard {
+    amountUsed {
+        amount
+        currencyCode
+    }
+    amountUsedV2: amountUsed {
+        amount
+        currencyCode
+    }
+    balance {
+        amount
+        currencyCode
+    }
+    balanceV2: balance {
+        amount
+        currencyCode
+    }
+    presentmentAmountUsed {
+        amount
+        currencyCode
+    }
+    id
+    lastCharacters
+}
+query CartQuery($cartId: ID!)
+{
+    cart(id: $cartId)
+    {
+        ...CartFragment
+    }
+}

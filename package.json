@@ -1,0 +1,19 @@
+{
+  "name": "shopify-storefront-cart",
+  "version": "1.0.0",
+  "description": "Minimal shopping cart based on Shopify's Storefront API",
+  "type": "module",
+  "main": "dist/storefront.js",
+  "author": "David Hirtz",
+  "license": "ISC",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8"
+  },
+  "dependencies": {
+    "@shopify/storefront-api-client": "^1.0.5"
+  }
+}
