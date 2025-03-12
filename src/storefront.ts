@@ -1,5 +1,5 @@
 import {createStorefrontApiClient, StorefrontApiClient} from "@shopify/storefront-api-client";
-import {Cart, CartLine, MoneyV2} from "../types/storefront-api-types";
+import {Cart, CartLine, MoneyV2, Mutation} from "../types/storefront-api-types";
 
 interface ShopifyConfig {
     $cartCount?: HTMLElement
@@ -21,34 +21,28 @@ export default class Shopify {
     $items: HTMLElement;
     $subtotal: HTMLElement;
     cartId: string | null;
-    cart: Cart;
+    cart: Cart | null;
     client: StorefrontApiClient;
-    errorClass: string;
-    isEmptyClass: string;
-    isLoadingClass: string;
+    errorClass: string = 'cart-error';
+    isEmptyClass: string =  'is-empty';
+    isLoadingClass: string = 'is-loading';
     itemCount: number = 0;
     itemTemplate: string;
-    storageKey: string;
+    storageKey: string = 'shopifyCartId';
     language: string;
-    thumbnailMaxWidth: number;
-    thumbnailMaxHeight: number;
+    thumbnailMaxWidth: number = 200;
+    thumbnailMaxHeight: number = 200;
 
-    constructor(domain:string, token:string, config: ShopifyConfig = {}) {
+    constructor(domain: string, token: string, config: ShopifyConfig = {}) {
         const shopify = this;
         const getById = (id: string): HTMLElement => document.getElementById(id);
 
         Object.assign(shopify, {
             $cartCount: getById('cart-count'),
-            $cart : getById('cart'),
-            $items : getById('items'),
-            $subtotal : getById('subtotal'),
-            errorClass : 'cart-error',
-            isEmptyClass : 'is-empty',
-            isLoadingClass : 'is-loading',
-            language : document.documentElement.lang || null,
-            thumbnailMaxWidth : 200,
-            thumbnailMaxHeight : 200,
-            storageKey: 'shopifyCartId',
+            $cart: getById('cart'),
+            $items: getById('items'),
+            $subtotal: getById('subtotal'),
+            language: document.documentElement.lang || null,
             ...config
         });
 
@@ -69,6 +63,7 @@ export default class Shopify {
     }
 
     afterInit() {
+        this.toggleLoading();
     }
 
     async request(operation: string, params?: object) {
@@ -93,13 +88,12 @@ export default class Shopify {
                 variables: {
                     cartId: shopify.cartId,
                 }
-            }).then(({cart}) => {
+            }).then(({cart}: { cart: Cart | null }) => {
                 if (cart) {
                     shopify.cart = cart;
 
                     shopify.updateItemCount();
                     shopify.afterCartUpdate();
-                    return cart;
                 } else {
                     return shopify.createCart();
                 }
@@ -109,12 +103,17 @@ export default class Shopify {
         return shopify.createCart();
     }
 
-    createCart() {
+    async createCart() {
         const shopify = this;
         const operation = `mutation createCart($i: CartInput) { cartCreate(input: $i) { cart { id checkoutUrl } } }`;
 
-        shopify.request(operation).then((data) => {
-            localStorage.setItem(shopify.storageKey, data.cartCreate.cart.id || null);
+        return shopify.request(operation).then((data: Mutation) => {
+            const cart = data.cartCreate.cart || null;
+
+            if (cart) {
+                shopify.cartId = cart.id;
+                localStorage.setItem(shopify.storageKey, cart.id);
+            }
         });
     }
 
@@ -134,7 +133,7 @@ export default class Shopify {
         const total = shopify.cart.cost.totalAmount;
 
         shopify.$subtotal.innerHTML = total ? shopify.formatPrice(total) : '';
-        shopify.$cart.classList.remove(shopify.isLoadingClass);
+        shopify.toggleLoading();
     }
 
     onLineCountChange() {
@@ -154,7 +153,7 @@ export default class Shopify {
         const shopify = this;
         const operation = 'mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) { cartLinesAdd(cartId: $cartId, lines: $lines) { cart { id } } }';
 
-        shopify.$cart.classList.add(shopify.isLoadingClass);
+        shopify.toggleLoading(true);
 
         shopify.request(operation, {
             variables: {
@@ -191,7 +190,6 @@ export default class Shopify {
         return await shopify.updateCart();
     }
 
-    // noinspection JSUnusedGlobalSymbols
     removeLine(lineItemId: string) {
         return this.updateLine(lineItemId, 0);
     }
@@ -203,7 +201,11 @@ export default class Shopify {
         })));
     }
 
-    render() {
+    toggleLoading(force: boolean = false): void {
+        this.$cart.classList.toggle(this.isLoadingClass, force);
+    }
+
+    render(): void {
         const shopify = this;
         shopify.$items.innerHTML = '';
 

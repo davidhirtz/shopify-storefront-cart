@@ -5,7 +5,7 @@
     "moduleResolution": "node",
     "outDir": "dist",
     "rootDir": "src",
-    "target": "ES6"
+    "target": "ESNext"
   },
   "include": [
     "src/**/*"

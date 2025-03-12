@@ -1,23 +1,32 @@
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 import { createStorefrontApiClient } from "@shopify/storefront-api-client";
 export default class Shopify {
+    $cart;
+    $cartCount;
+    $items;
+    $subtotal;
+    cartId;
+    cart;
+    client;
+    errorClass = 'cart-error';
+    isEmptyClass = 'is-empty';
+    isLoadingClass = 'is-loading';
+    itemCount = 0;
+    itemTemplate;
+    storageKey = 'shopifyCartId';
+    language;
+    thumbnailMaxWidth = 200;
+    thumbnailMaxHeight = 200;
     constructor(domain, token, config = {}) {
-        this.itemCount = 0;
-        this.formatPrice = (money) => {
-            const currency = money.currencyCode == 'EUR' ? '€' : money.currencyCode;
-            return parseFloat(money.amount).toLocaleString(this.language || undefined, { minimumFractionDigits: 2 }) + ' ' + currency;
-        };
         const shopify = this;
         const getById = (id) => document.getElementById(id);
-        Object.assign(shopify, Object.assign({ $cartCount: getById('cart-count'), $cart: getById('cart'), $items: getById('items'), $subtotal: getById('subtotal'), errorClass: 'cart-error', isEmptyClass: 'is-empty', isLoadingClass: 'is-loading', language: document.documentElement.lang || null, thumbnailMaxWidth: 200, thumbnailMaxHeight: 200, storageKey: 'shopifyCartId' }, config));
+        Object.assign(shopify, {
+            $cartCount: getById('cart-count'),
+            $cart: getById('cart'),
+            $items: getById('items'),
+            $subtotal: getById('subtotal'),
+            language: document.documentElement.lang || null,
+            ...config
+        });
         shopify.itemCount = 0;
         shopify.client = createStorefrontApiClient({
             apiVersion: '2025-01',
@@ -31,48 +40,48 @@ export default class Shopify {
         });
     }
     afterInit() {
+        this.toggleLoading();
     }
-    request(operation, params) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this.client.request(operation, params)
-                .then(({ errors, data }) => {
-                if (errors) {
-                    console.error(errors.graphQLErrors);
-                    this.renderError(errors.message);
-                }
-                return data || {};
-            });
-        });
-    }
-    updateCart() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const shopify = this;
-            if (shopify.cartId) {
-                const operation = `fragment CartFragment on Cart { id createdAt updatedAt lines(first: 20) { nodes { ...CartLineFragment } pageInfo { hasNextPage hasPreviousPage } } attributes { key value } cost { totalAmount { amount currencyCode } subtotalAmount { amount currencyCode } totalTaxAmount { amount currencyCode } totalDutyAmount { amount currencyCode } } checkoutUrl discountCodes { applicable code } discountAllocations { discountedAmount { amount currencyCode } discountApplication { targetType allocationMethod targetSelection value { ... on PricingPercentageValue { percentage } ... on MoneyV2 { amount currencyCode } } } ... on CartCodeDiscountAllocation { code } ... on CartAutomaticDiscountAllocation { title } ... on CartCustomDiscountAllocation { title } } appliedGiftCards { ...AppliedGiftCardFragment } note } fragment CartLineFragment on CartLine { id merchandise { ... on ProductVariant { id title image { thumbnail: url(transform: { maxWidth: ${shopify.thumbnailMaxWidth}, maxHeight: ${shopify.thumbnailMaxHeight}, }) url altText width height } product { id handle title } weight availableForSale sku selectedOptions { name value } compareAtPrice { amount currencyCode } price { amount currencyCode } unitPrice { amount currencyCode } unitPriceMeasurement { measuredType quantityUnit quantityValue referenceUnit referenceValue } } } quantity attributes { key value } cost { totalAmount { amount currencyCode } subtotalAmount { amount currencyCode } amountPerQuantity { amount currencyCode } compareAtAmountPerQuantity { amount currencyCode } } discountAllocations { discountedAmount { amount currencyCode } discountApplication { targetType allocationMethod targetSelection value { ... on PricingPercentageValue { percentage } ... on MoneyV2 { amount currencyCode } } } ... on CartCodeDiscountAllocation { code } ... on CartAutomaticDiscountAllocation { title } ... on CartCustomDiscountAllocation { title } } } fragment AppliedGiftCardFragment on AppliedGiftCard { amountUsed { amount currencyCode } amountUsedV2: amountUsed { amount currencyCode } balance { amount currencyCode } balanceV2: balance { amount currencyCode } presentmentAmountUsed { amount currencyCode } id lastCharacters } query CartQuery($cartId: ID!) { cart(id: $cartId) { ...CartFragment } }`;
-                return shopify.request(operation, {
-                    variables: {
-                        cartId: shopify.cartId,
-                    }
-                }).then(({ cart }) => {
-                    if (cart) {
-                        shopify.cart = cart;
-                        shopify.updateItemCount();
-                        shopify.afterCartUpdate();
-                        return cart;
-                    }
-                    else {
-                        return shopify.createCart();
-                    }
-                });
+    async request(operation, params) {
+        return this.client.request(operation, params)
+            .then(({ errors, data }) => {
+            if (errors) {
+                console.error(errors.graphQLErrors);
+                this.renderError(errors.message);
             }
-            return shopify.createCart();
+            return data || {};
         });
     }
-    createCart() {
+    async updateCart() {
+        const shopify = this;
+        if (shopify.cartId) {
+            const operation = `fragment CartFragment on Cart { id createdAt updatedAt lines(first: 20) { nodes { ...CartLineFragment } pageInfo { hasNextPage hasPreviousPage } } attributes { key value } cost { totalAmount { amount currencyCode } subtotalAmount { amount currencyCode } totalTaxAmount { amount currencyCode } totalDutyAmount { amount currencyCode } } checkoutUrl discountCodes { applicable code } discountAllocations { discountedAmount { amount currencyCode } discountApplication { targetType allocationMethod targetSelection value { ... on PricingPercentageValue { percentage } ... on MoneyV2 { amount currencyCode } } } ... on CartCodeDiscountAllocation { code } ... on CartAutomaticDiscountAllocation { title } ... on CartCustomDiscountAllocation { title } } appliedGiftCards { ...AppliedGiftCardFragment } note } fragment CartLineFragment on CartLine { id merchandise { ... on ProductVariant { id title image { thumbnail: url(transform: { maxWidth: ${shopify.thumbnailMaxWidth}, maxHeight: ${shopify.thumbnailMaxHeight}, }) url altText width height } product { id handle title } weight availableForSale sku selectedOptions { name value } compareAtPrice { amount currencyCode } price { amount currencyCode } unitPrice { amount currencyCode } unitPriceMeasurement { measuredType quantityUnit quantityValue referenceUnit referenceValue } } } quantity attributes { key value } cost { totalAmount { amount currencyCode } subtotalAmount { amount currencyCode } amountPerQuantity { amount currencyCode } compareAtAmountPerQuantity { amount currencyCode } } discountAllocations { discountedAmount { amount currencyCode } discountApplication { targetType allocationMethod targetSelection value { ... on PricingPercentageValue { percentage } ... on MoneyV2 { amount currencyCode } } } ... on CartCodeDiscountAllocation { code } ... on CartAutomaticDiscountAllocation { title } ... on CartCustomDiscountAllocation { title } } } fragment AppliedGiftCardFragment on AppliedGiftCard { amountUsed { amount currencyCode } amountUsedV2: amountUsed { amount currencyCode } balance { amount currencyCode } balanceV2: balance { amount currencyCode } presentmentAmountUsed { amount currencyCode } id lastCharacters } query CartQuery($cartId: ID!) { cart(id: $cartId) { ...CartFragment } }`;
+            return shopify.request(operation, {
+                variables: {
+                    cartId: shopify.cartId,
+                }
+            }).then(({ cart }) => {
+                if (cart) {
+                    shopify.cart = cart;
+                    shopify.updateItemCount();
+                    shopify.afterCartUpdate();
+                }
+                else {
+                    return shopify.createCart();
+                }
+            });
+        }
+        return shopify.createCart();
+    }
+    async createCart() {
         const shopify = this;
         const operation = `mutation createCart($i: CartInput) { cartCreate(input: $i) { cart { id checkoutUrl } } }`;
-        shopify.request(operation).then((data) => {
-            localStorage.setItem(shopify.storageKey, data.cartCreate.cart.id || null);
+        return shopify.request(operation).then((data) => {
+            const cart = data.cartCreate.cart || null;
+            if (cart) {
+                shopify.cartId = cart.id;
+                localStorage.setItem(shopify.storageKey, cart.id);
+            }
         });
     }
     updateItemCount() {
@@ -87,7 +96,7 @@ export default class Shopify {
         const shopify = this;
         const total = shopify.cart.cost.totalAmount;
         shopify.$subtotal.innerHTML = total ? shopify.formatPrice(total) : '';
-        shopify.$cart.classList.remove(shopify.isLoadingClass);
+        shopify.toggleLoading();
     }
     onLineCountChange() {
         const shopify = this;
@@ -102,7 +111,7 @@ export default class Shopify {
     addLine(variantId, quantity = 1) {
         const shopify = this;
         const operation = 'mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) { cartLinesAdd(cartId: $cartId, lines: $lines) { cart { id } } }';
-        shopify.$cart.classList.add(shopify.isLoadingClass);
+        shopify.toggleLoading(true);
         shopify.request(operation, {
             variables: {
                 cartId: shopify.cartId,
@@ -123,20 +132,17 @@ export default class Shopify {
             quantity: item.id === lineItemId ? quantity : item.quantity
         })));
     }
-    cartLinesUpdate(lines) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const shopify = this;
-            const operation = "mutation cartLinesUpdate( $cartId: ID! $lines: [CartLineUpdateInput!]! ) { cartLinesUpdate(cartId: $cartId, lines: $lines) { cart { id } } }";
-            yield shopify.request(operation, {
-                variables: {
-                    cartId: shopify.cartId,
-                    lines: lines,
-                }
-            });
-            return yield shopify.updateCart();
+    async cartLinesUpdate(lines) {
+        const shopify = this;
+        const operation = "mutation cartLinesUpdate( $cartId: ID! $lines: [CartLineUpdateInput!]! ) { cartLinesUpdate(cartId: $cartId, lines: $lines) { cart { id } } }";
+        await shopify.request(operation, {
+            variables: {
+                cartId: shopify.cartId,
+                lines: lines,
+            }
         });
+        return await shopify.updateCart();
     }
-    // noinspection JSUnusedGlobalSymbols
     removeLine(lineItemId) {
         return this.updateLine(lineItemId, 0);
     }
@@ -145,6 +151,9 @@ export default class Shopify {
             id: item.id,
             quantity: 0
         })));
+    }
+    toggleLoading(force = false) {
+        this.$cart.classList.toggle(this.isLoadingClass, force);
     }
     render() {
         const shopify = this;
@@ -164,4 +173,8 @@ export default class Shopify {
         const message = error || 'An unknown error occurred';
         shopify.$items.innerHTML = `<div class="${shopify.errorClass}">${message}</div>${shopify.$items.innerHTML}`;
     }
+    formatPrice = (money) => {
+        const currency = money.currencyCode == 'EUR' ? '€' : money.currencyCode;
+        return parseFloat(money.amount).toLocaleString(this.language || undefined, { minimumFractionDigits: 2 }) + ' ' + currency;
+    };
 }
