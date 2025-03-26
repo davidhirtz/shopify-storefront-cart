@@ -6,6 +6,7 @@ interface ShopifyConfig {
     $cart?: HTMLElement | null
     $items?: HTMLElement | null
     $subtotal?: HTMLElement | null
+    countQuantity?: boolean
     errorClass?: string
     isEmptyClass?: string
     isLoadingClass?: string
@@ -23,6 +24,7 @@ export default class Shopify {
     cartId: string | null;
     cart: Cart | null;
     client: StorefrontApiClient;
+    countQuantity: boolean = false;
     errorClass: string = 'cart-error';
     isEmptyClass: string = 'is-empty';
     isLoadingClass: string = 'is-loading';
@@ -125,6 +127,14 @@ export default class Shopify {
         if (shopify.itemCount !== itemCount) {
             shopify.itemCount = itemCount;
             shopify.onLineCountChange();
+        } else if(shopify.countQuantity) {
+            let quantity = 0;
+
+            shopify.cart.lines.nodes.forEach((line) => {
+                quantity += line.quantity;
+            });
+
+            shopify.updateCartCount(quantity);
         }
     }
 

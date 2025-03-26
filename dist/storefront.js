@@ -7,6 +7,7 @@ export default class Shopify {
     cartId;
     cart;
     client;
+    countQuantity = false;
     errorClass = 'cart-error';
     isEmptyClass = 'is-empty';
     isLoadingClass = 'is-loading';
@@ -90,6 +91,13 @@ export default class Shopify {
         if (shopify.itemCount !== itemCount) {
             shopify.itemCount = itemCount;
             shopify.onLineCountChange();
+        }
+        else if (shopify.countQuantity) {
+            let quantity = 0;
+            shopify.cart.lines.nodes.forEach((line) => {
+                quantity += line.quantity;
+            });
+            shopify.updateCartCount(quantity);
         }
     }
     afterCartUpdate() {

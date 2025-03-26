@@ -5,6 +5,7 @@ interface ShopifyConfig {
     $cart?: HTMLElement | null;
     $items?: HTMLElement | null;
     $subtotal?: HTMLElement | null;
+    countQuantity?: boolean;
     errorClass?: string;
     isEmptyClass?: string;
     isLoadingClass?: string;
@@ -21,6 +22,7 @@ export default class Shopify {
     cartId: string | null;
     cart: Cart | null;
     client: StorefrontApiClient;
+    countQuantity: boolean;
     errorClass: string;
     isEmptyClass: string;
     isLoadingClass: string;
