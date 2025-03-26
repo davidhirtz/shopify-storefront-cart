@@ -2,10 +2,10 @@ import {createStorefrontApiClient, StorefrontApiClient} from "@shopify/storefron
 import {Cart, CartLine, MoneyV2, Mutation} from "../types/storefront-api-types";
 
 interface ShopifyConfig {
-    $cartCount?: HTMLElement
-    $cart?: HTMLElement
-    $items?: HTMLElement
-    $subtotal?: HTMLElement
+    $cartCount?: HTMLElement | null
+    $cart?: HTMLElement | null
+    $items?: HTMLElement | null
+    $subtotal?: HTMLElement | null
     errorClass?: string
     isEmptyClass?: string
     isLoadingClass?: string
@@ -16,15 +16,15 @@ interface ShopifyConfig {
 }
 
 export default class Shopify {
-    $cart: HTMLElement;
-    $cartCount: HTMLElement;
-    $items: HTMLElement;
-    $subtotal: HTMLElement;
+    $cart: HTMLElement | null;
+    $cartCount: HTMLElement | null;
+    $items: HTMLElement | null;
+    $subtotal: HTMLElement | null;
     cartId: string | null;
     cart: Cart | null;
     client: StorefrontApiClient;
     errorClass: string = 'cart-error';
-    isEmptyClass: string =  'is-empty';
+    isEmptyClass: string = 'is-empty';
     isLoadingClass: string = 'is-loading';
     itemCount: number = 0;
     itemTemplate: string;
@@ -132,7 +132,10 @@ export default class Shopify {
         const shopify = this;
         const total = shopify.cart.cost.totalAmount;
 
-        shopify.$subtotal.innerHTML = total ? shopify.formatPrice(total) : '';
+        if (shopify.$subtotal) {
+            shopify.$subtotal.innerHTML = total ? shopify.formatPrice(total) : '';
+        }
+
         shopify.toggleLoading();
     }
 
@@ -140,13 +143,18 @@ export default class Shopify {
         const shopify = this;
         const count = shopify.itemCount;
 
-        shopify.$cart.classList[count > 0 ? 'remove' : 'add'](shopify.isEmptyClass);
+        if (shopify.$cart) {
+            shopify.$cart.classList[count > 0 ? 'remove' : 'add'](shopify.isEmptyClass);
+        }
+
         shopify.updateCartCount(count);
         shopify.render();
     }
 
     updateCartCount(count: number) {
-        this.$cartCount.innerHTML = count.toString();
+        if (this.$cartCount) {
+            this.$cartCount.innerHTML = count.toString();
+        }
     }
 
     addLine(variantId: string, quantity: number = 1) {
@@ -202,14 +210,20 @@ export default class Shopify {
     }
 
     toggleLoading(force: boolean = false): void {
-        this.$cart.classList.toggle(this.isLoadingClass, force);
+        const shopify = this;
+
+        if (shopify.$cart) {
+            shopify.$cart.classList.toggle(shopify.isLoadingClass, force);
+        }
     }
 
     render(): void {
         const shopify = this;
-        shopify.$items.innerHTML = '';
 
-        shopify.cart.lines.nodes.forEach((line: CartLine) => shopify.$items.innerHTML += shopify.renderLine(line));
+        if (shopify.$items) {
+            shopify.$items.innerHTML = '';
+            shopify.cart.lines.nodes.forEach((line: CartLine) => shopify.$items.innerHTML += shopify.renderLine(line));
+        }
     }
 
     renderLine(item: CartLine): string {
@@ -225,7 +239,10 @@ export default class Shopify {
     renderError(error ?: string): void {
         const shopify = this;
         const message = error || 'An unknown error occurred';
-        shopify.$items.innerHTML = `<div class="${shopify.errorClass}">${message}</div>${shopify.$items.innerHTML}`;
+
+        if (shopify.$items) {
+            shopify.$items.innerHTML = `<div class="${shopify.errorClass}">${message}</div>${shopify.$items.innerHTML}`;
+        }
     }
 
     formatPrice = (money: MoneyV2): string => {

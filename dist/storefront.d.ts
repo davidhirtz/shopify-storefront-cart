@@ -1,10 +1,10 @@
 import { StorefrontApiClient } from "@shopify/storefront-api-client";
 import { Cart, CartLine, MoneyV2 } from "../types/storefront-api-types";
 interface ShopifyConfig {
-    $cartCount?: HTMLElement;
-    $cart?: HTMLElement;
-    $items?: HTMLElement;
-    $subtotal?: HTMLElement;
+    $cartCount?: HTMLElement | null;
+    $cart?: HTMLElement | null;
+    $items?: HTMLElement | null;
+    $subtotal?: HTMLElement | null;
     errorClass?: string;
     isEmptyClass?: string;
     isLoadingClass?: string;
@@ -14,10 +14,10 @@ interface ShopifyConfig {
     storageKey?: string;
 }
 export default class Shopify {
-    $cart: HTMLElement;
-    $cartCount: HTMLElement;
-    $items: HTMLElement;
-    $subtotal: HTMLElement;
+    $cart: HTMLElement | null;
+    $cartCount: HTMLElement | null;
+    $items: HTMLElement | null;
+    $subtotal: HTMLElement | null;
     cartId: string | null;
     cart: Cart | null;
     client: StorefrontApiClient;

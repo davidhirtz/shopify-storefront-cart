@@ -95,18 +95,24 @@ export default class Shopify {
     afterCartUpdate() {
         const shopify = this;
         const total = shopify.cart.cost.totalAmount;
-        shopify.$subtotal.innerHTML = total ? shopify.formatPrice(total) : '';
+        if (shopify.$subtotal) {
+            shopify.$subtotal.innerHTML = total ? shopify.formatPrice(total) : '';
+        }
         shopify.toggleLoading();
     }
     onLineCountChange() {
         const shopify = this;
         const count = shopify.itemCount;
-        shopify.$cart.classList[count > 0 ? 'remove' : 'add'](shopify.isEmptyClass);
+        if (shopify.$cart) {
+            shopify.$cart.classList[count > 0 ? 'remove' : 'add'](shopify.isEmptyClass);
+        }
         shopify.updateCartCount(count);
         shopify.render();
     }
     updateCartCount(count) {
-        this.$cartCount.innerHTML = count.toString();
+        if (this.$cartCount) {
+            this.$cartCount.innerHTML = count.toString();
+        }
     }
     addLine(variantId, quantity = 1) {
         const shopify = this;
@@ -153,12 +159,17 @@ export default class Shopify {
         })));
     }
     toggleLoading(force = false) {
-        this.$cart.classList.toggle(this.isLoadingClass, force);
+        const shopify = this;
+        if (shopify.$cart) {
+            shopify.$cart.classList.toggle(shopify.isLoadingClass, force);
+        }
     }
     render() {
         const shopify = this;
-        shopify.$items.innerHTML = '';
-        shopify.cart.lines.nodes.forEach((line) => shopify.$items.innerHTML += shopify.renderLine(line));
+        if (shopify.$items) {
+            shopify.$items.innerHTML = '';
+            shopify.cart.lines.nodes.forEach((line) => shopify.$items.innerHTML += shopify.renderLine(line));
+        }
     }
     renderLine(item) {
         return this.renderLineTemplate({
@@ -171,7 +182,9 @@ export default class Shopify {
     renderError(error) {
         const shopify = this;
         const message = error || 'An unknown error occurred';
-        shopify.$items.innerHTML = `<div class="${shopify.errorClass}">${message}</div>${shopify.$items.innerHTML}`;
+        if (shopify.$items) {
+            shopify.$items.innerHTML = `<div class="${shopify.errorClass}">${message}</div>${shopify.$items.innerHTML}`;
+        }
     }
     formatPrice = (money) => {
         const currency = money.currencyCode == 'EUR' ? '€' : money.currencyCode;

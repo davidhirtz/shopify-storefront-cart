@@ -1,6 +1,6 @@
 {
   "name": "shopify-storefront-cart",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Minimal shopping cart based on Shopify's Storefront API",
   "type": "module",
   "main": "dist/storefront.js",
