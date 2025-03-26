@@ -24,11 +24,12 @@ export default class Shopify {
     cartId: string | null;
     cart: Cart | null;
     client: StorefrontApiClient;
-    countQuantity: boolean = false;
+    countQuantity: boolean;
     errorClass: string = 'cart-error';
     isEmptyClass: string = 'is-empty';
     isLoadingClass: string = 'is-loading';
     itemCount: number = 0;
+    totalQuantity: number = 0;
     itemTemplate: string;
     storageKey: string = 'shopifyCartId';
     language: string;
@@ -44,6 +45,7 @@ export default class Shopify {
             $cart: getById('cart'),
             $items: getById('items'),
             $subtotal: getById('subtotal'),
+            countQuantity: false,
             language: document.documentElement.lang || null,
             ...config
         });
@@ -121,20 +123,17 @@ export default class Shopify {
 
     updateItemCount() {
         const shopify = this;
-
         const itemCount = shopify.cart.lines.nodes.length || 0;
+
+        shopify.totalQuantity = itemCount
+            ? shopify.cart.lines.nodes.reduce((total, line) => total + line.quantity, 0)
+            : 0;
 
         if (shopify.itemCount !== itemCount) {
             shopify.itemCount = itemCount;
             shopify.onLineCountChange();
-        } else if(shopify.countQuantity) {
-            let quantity = 0;
-
-            shopify.cart.lines.nodes.forEach((line) => {
-                quantity += line.quantity;
-            });
-
-            shopify.updateCartCount(quantity);
+        } else if (shopify.countQuantity) {
+            shopify.updateCartCount();
         }
     }
 
@@ -157,13 +156,16 @@ export default class Shopify {
             shopify.$cart.classList[count > 0 ? 'remove' : 'add'](shopify.isEmptyClass);
         }
 
-        shopify.updateCartCount(count);
+        shopify.updateCartCount();
         shopify.render();
     }
 
-    updateCartCount(count: number) {
-        if (this.$cartCount) {
-            this.$cartCount.innerHTML = count.toString();
+    updateCartCount() {
+        const shopify = this;
+        const count = shopify.countQuantity ? this.totalQuantity : shopify.itemCount;
+
+        if (shopify.$cartCount) {
+            shopify.$cartCount.innerHTML = count.toString();
         }
     }
 

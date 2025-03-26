@@ -27,6 +27,7 @@ export default class Shopify {
     isEmptyClass: string;
     isLoadingClass: string;
     itemCount: number;
+    totalQuantity: number;
     itemTemplate: string;
     storageKey: string;
     language: string;
@@ -40,7 +41,7 @@ export default class Shopify {
     updateItemCount(): void;
     afterCartUpdate(): void;
     onLineCountChange(): void;
-    updateCartCount(count: number): void;
+    updateCartCount(): void;
     addLine(variantId: string, quantity?: number): void;
     updateLine(lineItemId: string, quantity: number): Promise<void>;
     private cartLinesUpdate;

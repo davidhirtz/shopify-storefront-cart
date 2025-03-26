@@ -7,11 +7,12 @@ export default class Shopify {
     cartId;
     cart;
     client;
-    countQuantity = false;
+    countQuantity;
     errorClass = 'cart-error';
     isEmptyClass = 'is-empty';
     isLoadingClass = 'is-loading';
     itemCount = 0;
+    totalQuantity = 0;
     itemTemplate;
     storageKey = 'shopifyCartId';
     language;
@@ -25,6 +26,7 @@ export default class Shopify {
             $cart: getById('cart'),
             $items: getById('items'),
             $subtotal: getById('subtotal'),
+            countQuantity: false,
             language: document.documentElement.lang || null,
             ...config
         });
@@ -88,16 +90,15 @@ export default class Shopify {
     updateItemCount() {
         const shopify = this;
         const itemCount = shopify.cart.lines.nodes.length || 0;
+        shopify.totalQuantity = itemCount
+            ? shopify.cart.lines.nodes.reduce((total, line) => total + line.quantity, 0)
+            : 0;
         if (shopify.itemCount !== itemCount) {
             shopify.itemCount = itemCount;
             shopify.onLineCountChange();
         }
         else if (shopify.countQuantity) {
-            let quantity = 0;
-            shopify.cart.lines.nodes.forEach((line) => {
-                quantity += line.quantity;
-            });
-            shopify.updateCartCount(quantity);
+            shopify.updateCartCount();
         }
     }
     afterCartUpdate() {
@@ -114,12 +115,14 @@ export default class Shopify {
         if (shopify.$cart) {
             shopify.$cart.classList[count > 0 ? 'remove' : 'add'](shopify.isEmptyClass);
         }
-        shopify.updateCartCount(count);
+        shopify.updateCartCount();
         shopify.render();
     }
-    updateCartCount(count) {
-        if (this.$cartCount) {
-            this.$cartCount.innerHTML = count.toString();
+    updateCartCount() {
+        const shopify = this;
+        const count = shopify.countQuantity ? this.totalQuantity : shopify.itemCount;
+        if (shopify.$cartCount) {
+            shopify.$cartCount.innerHTML = count.toString();
         }
     }
     addLine(variantId, quantity = 1) {
