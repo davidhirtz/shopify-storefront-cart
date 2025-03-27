@@ -1,80 +1,67 @@
 import { createStorefrontApiClient } from "@shopify/storefront-api-client";
+// noinspection JSUnusedGlobalSymbols
 export default class Shopify {
-    $cart;
-    $cartCount;
-    $items;
-    $subtotal;
+    $cart = 'shopify-cart';
+    $count = 'shopify-count';
+    $checkout = 'shopify-checkout';
+    $lines = 'shopify-lines';
+    $link = 'shopify-link';
+    $quantity = '[data-shopify-quantity]';
+    $subtotal = 'shopify-subtotal';
+    $total = 'shopify-total';
+    apiVersion = '2025-01';
     cartId;
     cart;
     client;
-    countQuantity;
-    errorClass = 'cart-error';
+    errorClass = 'error';
     isEmptyClass = 'is-empty';
     isLoadingClass = 'is-loading';
-    itemCount = 0;
+    lineCount = 0;
     totalQuantity = 0;
     itemTemplate;
+    parent = document;
     storageKey = 'shopifyCartId';
     language;
     thumbnailMaxWidth = 200;
     thumbnailMaxHeight = 200;
+    timeout;
+    timeoutDuration = 500;
+    useQuantity = false;
     constructor(domain, token, config = {}) {
         const shopify = this;
-        const getById = (id) => document.getElementById(id);
         Object.assign(shopify, {
-            $cartCount: getById('cart-count'),
-            $cart: getById('cart'),
-            $items: getById('items'),
-            $subtotal: getById('subtotal'),
-            countQuantity: false,
             language: document.documentElement.lang || null,
             ...config
         });
-        shopify.itemCount = 0;
         shopify.client = createStorefrontApiClient({
-            apiVersion: '2025-01',
+            apiVersion: shopify.apiVersion,
             storeDomain: domain,
             publicAccessToken: token,
         });
         shopify.cartId = localStorage.getItem(shopify.storageKey);
-        shopify.cart = null;
-        shopify.updateCart().then(() => {
-            shopify.afterInit();
-        });
+        shopify.loadCart().then(() => shopify.afterInit());
     }
-    afterInit() {
-        this.toggleLoading();
-    }
-    async request(operation, params) {
-        return this.client.request(operation, params)
-            .then(({ errors, data }) => {
-            if (errors) {
-                console.error(errors.graphQLErrors);
-                this.renderError(errors.message);
-            }
-            return data || {};
-        });
-    }
-    async updateCart() {
+    async loadCart() {
         const shopify = this;
-        if (shopify.cartId) {
-            const operation = `fragment CartFragment on Cart { id createdAt updatedAt lines(first: 20) { nodes { ...CartLineFragment } pageInfo { hasNextPage hasPreviousPage } } attributes { key value } cost { totalAmount { amount currencyCode } subtotalAmount { amount currencyCode } totalTaxAmount { amount currencyCode } totalDutyAmount { amount currencyCode } } checkoutUrl discountCodes { applicable code } discountAllocations { discountedAmount { amount currencyCode } discountApplication { targetType allocationMethod targetSelection value { ... on PricingPercentageValue { percentage } ... on MoneyV2 { amount currencyCode } } } ... on CartCodeDiscountAllocation { code } ... on CartAutomaticDiscountAllocation { title } ... on CartCustomDiscountAllocation { title } } appliedGiftCards { ...AppliedGiftCardFragment } note } fragment CartLineFragment on CartLine { id merchandise { ... on ProductVariant { id title image { thumbnail: url(transform: { maxWidth: ${shopify.thumbnailMaxWidth}, maxHeight: ${shopify.thumbnailMaxHeight}, }) url altText width height } product { id handle title } weight availableForSale sku selectedOptions { name value } compareAtPrice { amount currencyCode } price { amount currencyCode } unitPrice { amount currencyCode } unitPriceMeasurement { measuredType quantityUnit quantityValue referenceUnit referenceValue } } } quantity attributes { key value } cost { totalAmount { amount currencyCode } subtotalAmount { amount currencyCode } amountPerQuantity { amount currencyCode } compareAtAmountPerQuantity { amount currencyCode } } discountAllocations { discountedAmount { amount currencyCode } discountApplication { targetType allocationMethod targetSelection value { ... on PricingPercentageValue { percentage } ... on MoneyV2 { amount currencyCode } } } ... on CartCodeDiscountAllocation { code } ... on CartAutomaticDiscountAllocation { title } ... on CartCustomDiscountAllocation { title } } } fragment AppliedGiftCardFragment on AppliedGiftCard { amountUsed { amount currencyCode } amountUsedV2: amountUsed { amount currencyCode } balance { amount currencyCode } balanceV2: balance { amount currencyCode } presentmentAmountUsed { amount currencyCode } id lastCharacters } query CartQuery($cartId: ID!) { cart(id: $cartId) { ...CartFragment } }`;
-            return shopify.request(operation, {
-                variables: {
-                    cartId: shopify.cartId,
-                }
-            }).then(({ cart }) => {
-                if (cart) {
-                    shopify.cart = cart;
-                    shopify.updateItemCount();
-                    shopify.afterCartUpdate();
-                }
-                else {
-                    return shopify.createCart();
-                }
-            });
+        const operation = `fragment CartFragment on Cart { id createdAt updatedAt lines(first: 20) { nodes { ...CartLineFragment } pageInfo { hasNextPage hasPreviousPage } } attributes { key value } cost { totalAmount { amount currencyCode } subtotalAmount { amount currencyCode } totalTaxAmount { amount currencyCode } totalDutyAmount { amount currencyCode } } checkoutUrl discountCodes { applicable code } discountAllocations { discountedAmount { amount currencyCode } discountApplication { targetType allocationMethod targetSelection value { ... on PricingPercentageValue { percentage } ... on MoneyV2 { amount currencyCode } } } ... on CartCodeDiscountAllocation { code } ... on CartAutomaticDiscountAllocation { title } ... on CartCustomDiscountAllocation { title } } appliedGiftCards { ...AppliedGiftCardFragment } note } fragment CartLineFragment on CartLine { id merchandise { ... on ProductVariant { id title image { thumbnail: url(transform: { maxWidth: ${shopify.thumbnailMaxWidth}, maxHeight: ${shopify.thumbnailMaxHeight}, }) url altText width height } product { id handle title } weight availableForSale sku selectedOptions { name value } compareAtPrice { amount currencyCode } price { amount currencyCode } unitPrice { amount currencyCode } unitPriceMeasurement { measuredType quantityUnit quantityValue referenceUnit referenceValue } } } quantity attributes { key value } cost { totalAmount { amount currencyCode } subtotalAmount { amount currencyCode } amountPerQuantity { amount currencyCode } compareAtAmountPerQuantity { amount currencyCode } } discountAllocations { discountedAmount { amount currencyCode } discountApplication { targetType allocationMethod targetSelection value { ... on PricingPercentageValue { percentage } ... on MoneyV2 { amount currencyCode } } } ... on CartCodeDiscountAllocation { code } ... on CartAutomaticDiscountAllocation { title } ... on CartCustomDiscountAllocation { title } } } fragment AppliedGiftCardFragment on AppliedGiftCard { amountUsed { amount currencyCode } amountUsedV2: amountUsed { amount currencyCode } balance { amount currencyCode } balanceV2: balance { amount currencyCode } presentmentAmountUsed { amount currencyCode } id lastCharacters } query CartQuery($cartId: ID!) { cart(id: $cartId) { ...CartFragment } }`;
+        if (!shopify.cartId) {
+            return shopify.createCart();
         }
-        return shopify.createCart();
+        return shopify.request(operation, {
+            variables: {
+                cartId: shopify.cartId,
+            }
+        }).then(({ cart }) => {
+            if (!cart) {
+                return shopify.createCart();
+            }
+            shopify.cart = cart;
+            shopify.lineCount = cart.lines.nodes.length || 0;
+            shopify.totalQuantity = shopify.lineCount
+                ? cart.lines.nodes.reduce((total, line) => total + line.quantity, 0)
+                : 0;
+            shopify.updateCart();
+        });
     }
     async createCart() {
         const shopify = this;
@@ -84,52 +71,15 @@ export default class Shopify {
             if (cart) {
                 shopify.cartId = cart.id;
                 localStorage.setItem(shopify.storageKey, cart.id);
+                return shopify.loadCart();
             }
         });
     }
-    updateItemCount() {
-        const shopify = this;
-        const itemCount = shopify.cart.lines.nodes.length || 0;
-        shopify.totalQuantity = itemCount
-            ? shopify.cart.lines.nodes.reduce((total, line) => total + line.quantity, 0)
-            : 0;
-        if (shopify.itemCount !== itemCount) {
-            shopify.itemCount = itemCount;
-            shopify.onLineCountChange();
-        }
-        else if (shopify.countQuantity) {
-            shopify.updateCartCount();
-        }
-    }
-    afterCartUpdate() {
-        const shopify = this;
-        const total = shopify.cart.cost.totalAmount;
-        if (shopify.$subtotal) {
-            shopify.$subtotal.innerHTML = total ? shopify.formatPrice(total) : '';
-        }
-        shopify.toggleLoading();
-    }
-    onLineCountChange() {
-        const shopify = this;
-        const count = shopify.itemCount;
-        if (shopify.$cart) {
-            shopify.$cart.classList[count > 0 ? 'remove' : 'add'](shopify.isEmptyClass);
-        }
-        shopify.updateCartCount();
-        shopify.render();
-    }
-    updateCartCount() {
-        const shopify = this;
-        const count = shopify.countQuantity ? this.totalQuantity : shopify.itemCount;
-        if (shopify.$cartCount) {
-            shopify.$cartCount.innerHTML = count.toString();
-        }
-    }
-    addLine(variantId, quantity = 1) {
+    async addLine(variantId, quantity = 1) {
         const shopify = this;
         const operation = 'mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) { cartLinesAdd(cartId: $cartId, lines: $lines) { cart { id } } }';
-        shopify.toggleLoading(true);
-        shopify.request(operation, {
+        shopify.setLoading(true);
+        return shopify.request(operation, {
             variables: {
                 cartId: shopify.cartId,
                 lines: [
@@ -139,9 +89,7 @@ export default class Shopify {
                     }
                 ]
             }
-        })
-            .then(() => shopify.updateCart())
-            .then(() => shopify.render());
+        }).then(() => shopify.loadCart());
     }
     updateLine(lineItemId, quantity) {
         return this.cartLinesUpdate(this.cart.lines.nodes.map((item) => ({
@@ -152,13 +100,12 @@ export default class Shopify {
     async cartLinesUpdate(lines) {
         const shopify = this;
         const operation = "mutation cartLinesUpdate( $cartId: ID! $lines: [CartLineUpdateInput!]! ) { cartLinesUpdate(cartId: $cartId, lines: $lines) { cart { id } } }";
-        await shopify.request(operation, {
+        return shopify.request(operation, {
             variables: {
                 cartId: shopify.cartId,
                 lines: lines,
             }
-        });
-        return await shopify.updateCart();
+        }).then(() => shopify.loadCart());
     }
     removeLine(lineItemId) {
         return this.updateLine(lineItemId, 0);
@@ -169,22 +116,70 @@ export default class Shopify {
             quantity: 0
         })));
     }
-    toggleLoading(force = false) {
-        const shopify = this;
-        if (shopify.$cart) {
-            shopify.$cart.classList.toggle(shopify.isLoadingClass, force);
-        }
+    afterInit() {
+        this.renderCart();
     }
-    render() {
+    onQuantityChange = ($input) => {
         const shopify = this;
-        if (shopify.$items) {
-            shopify.$items.innerHTML = '';
-            shopify.cart.lines.nodes.forEach((line) => shopify.$items.innerHTML += shopify.renderLine(line));
-        }
+        const callback = () => {
+            shopify.setLoading(true);
+            void shopify.updateLine($input.dataset.id, Math.max(parseInt($input.value), 0));
+            console.log('Quantity changed');
+        };
+        clearTimeout(shopify.timeout);
+        shopify.timeout = window.setTimeout(callback, shopify.timeoutDuration);
+    };
+    renderCart() {
+        const shopify = this;
+        shopify.updateCart();
+        shopify.renderCheckout();
     }
-    renderLine(item) {
+    updateCart() {
+        const shopify = this;
+        shopify.toggleEmpty();
+        shopify.renderCartCount();
+        shopify.renderLines();
+        shopify.renderTotals();
+        shopify.setLoading();
+    }
+    renderCartCount() {
+        const shopify = this;
+        const count = shopify.useQuantity ? shopify.totalQuantity : shopify.lineCount;
+        shopify.queryAll(shopify.$count, ($el) => $el.innerHTML = count.toString());
+        shopify.queryAll(shopify.$link, ($el) => $el.style.display = count > 0 ? 'block' : 'none');
+    }
+    renderCheckout() {
+        const shopify = this;
+        shopify.queryAll(shopify.$checkout, ($el) => $el.onclick = () => {
+            if (shopify.lineCount) {
+                location.href = shopify.cart.checkoutUrl;
+            }
+        });
+    }
+    renderLines() {
+        const shopify = this;
+        shopify.queryAll(shopify.$lines, ($items) => {
+            let html = '';
+            shopify.cart.lines.nodes.forEach((line) => html += shopify.renderLine(line));
+            $items.innerHTML = html;
+        });
+        shopify.queryAll(shopify.$quantity, ($input) => {
+            $input.onchange = () => shopify.onQuantityChange($input);
+        });
+    }
+    renderLine(line) {
         return this.renderLineTemplate({
-            item: item,
+            line: line,
+        });
+    }
+    renderTotals() {
+        const shopify = this;
+        const cart = shopify.cart;
+        shopify.queryAll(shopify.$subtotal, ($el) => {
+            return $el.innerHTML = cart ? shopify.formatPrice(cart.cost.subtotalAmount) : '';
+        });
+        shopify.queryAll(shopify.$total, ($el) => {
+            return $el.innerHTML = cart ? shopify.formatPrice(cart.cost.totalAmount) : '';
         });
     }
     renderLineTemplate(params) {
@@ -193,12 +188,41 @@ export default class Shopify {
     renderError(error) {
         const shopify = this;
         const message = error || 'An unknown error occurred';
-        if (shopify.$items) {
-            shopify.$items.innerHTML = `<div class="${shopify.errorClass}">${message}</div>${shopify.$items.innerHTML}`;
-        }
+        shopify.queryAll(shopify.$lines, ($lines) => {
+            $lines.innerHTML = `<div class="${shopify.errorClass}">${message}</div>${$lines.innerHTML}`;
+        });
+    }
+    toggleEmpty() {
+        const shopify = this;
+        shopify.queryAll(shopify.$cart, ($el) => $el.classList.toggle(shopify.isEmptyClass, !shopify.lineCount));
+    }
+    setLoading(value = false) {
+        const shopify = this;
+        shopify.queryAll(shopify.$cart, ($cart) => {
+            $cart.classList[value ? 'add' : 'remove'](shopify.isLoadingClass);
+        });
     }
     formatPrice = (money) => {
         const currency = money.currencyCode == 'EUR' ? '€' : money.currencyCode;
         return parseFloat(money.amount).toLocaleString(this.language || undefined, { minimumFractionDigits: 2 }) + ' ' + currency;
+    };
+    async request(operation, params) {
+        return this.client.request(operation, params)
+            .then(({ errors, data }) => {
+            if (errors) {
+                console.error(errors.graphQLErrors);
+                this.renderError(errors.message);
+            }
+            return data || {};
+        });
+    }
+    queryAll = (selector, callback) => {
+        if (selector) {
+            const $list = this.parent.querySelectorAll(selector);
+            if (callback) {
+                $list.forEach(callback);
+            }
+            return $list;
+        }
     };
 }
