@@ -124,7 +124,6 @@ export default class Shopify {
         const callback = () => {
             shopify.setLoading(true);
             void shopify.updateLine($input.dataset.id, Math.max(parseInt($input.value), 0));
-            console.log('Quantity changed');
         };
         clearTimeout(shopify.timeout);
         shopify.timeout = window.setTimeout(callback, shopify.timeoutDuration);
